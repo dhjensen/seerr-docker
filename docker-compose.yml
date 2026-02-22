@@ -1,10 +1,31 @@
 name: Seerr
 
 services:
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION}-alpine
+    container_name: seerr-pg
+    volumes:
+      - seerr-postgres_data:/var/lib/postgresql:rw
+    environment:
+      - POSTGRES_DB
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+    networks:
+      - db
+    restart: unless-stopped
+    healthcheck:
+      test: pg_isready -q -t 2 -d $$POSTGRES_DB -U $$POSTGRES_USER
+      start_period: 20s
+      timeout: 30s
+      interval: 10s
+      retries: 5
+    labels:
+      - wud.tag.include=^\d+\.\d+-alpine$$
+      - traefik.enable=false
   seerr:
     image: seerr/seerr:v${SEERR_VERSION}
     container_name: seerr
-    init: true
     volumes:
       - ./config:/app/config:rw
     environment:
@@ -28,28 +49,7 @@ services:
     labels:
       - wud.tag.include=^v\d+\.\d+\.\d+$$
       - traefik.enable=true
-
-  postgres:
-    image: postgres:${POSTGRES_VERSION}-alpine
-    container_name: seerr-pg
-    volumes:
-      - seerr-postgres_data:/var/lib/postgresql:rw
-    networks:
-      - db
-    environment: 
-      - POSTGRES_DB
-      - POSTGRES_PASSWORD
-      - POSTGRES_USER
-    restart: unless-stopped
-    healthcheck:
-      test: pg_isready -q -t 2 -d $$POSTGRES_DB -U $$POSTGRES_USER
-      start_period: 20s
-      timeout: 30s
-      interval: 10s
-      retries: 5
-    labels:
-      - wud.tag.include=^\d+\.\d+-alpine$$
-      - traefik.enable=false
+    init: true
 
 networks:
   backend:
